@@ -24,6 +24,12 @@ app.include_router(hospitals.router)
 app.include_router(recommend.router)
 
 
+@app.on_event("shutdown")
+async def shutdown():
+    from app.services.scraper import close_browser
+    await close_browser()
+
+
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}

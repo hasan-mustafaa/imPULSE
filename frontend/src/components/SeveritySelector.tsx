@@ -17,6 +17,7 @@ export default function SeveritySelector({ severity, onChange }: SeveritySelecto
     <div className="flex gap-2">
       {SEVERITY_OPTIONS.map((option) => (
         <button
+          type="button"
           key={option.value}
           onClick={() => onChange(option.value)}
           className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
