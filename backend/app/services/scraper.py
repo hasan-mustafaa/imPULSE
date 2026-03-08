@@ -1,3 +1,4 @@
+import asyncio
 import re
 import time
 from dataclasses import dataclass, field
@@ -189,6 +190,22 @@ async def _scrape_from_page() -> list[Hospital]:
                     wait_time_minutes=_parse_wait_time(wait_text),
                     wait_time_label=wait_text or "Unknown",
                 ))
+
+        # Geocode hospitals whose coordinates weren't in the lookup table
+        unknown = [h for h in hospitals if h.lat == 0 and h.lng == 0]
+        if unknown:
+            from app.services.maps import geocode_address
+            results = await asyncio.gather(
+                *[geocode_address(h.address) for h in unknown],
+                return_exceptions=True,
+            )
+            for h, result in zip(unknown, results):
+                if isinstance(result, dict):
+                    h.lat = result["lat"]
+                    h.lng = result["lng"]
+
+        # Drop any hospitals still missing coordinates
+        hospitals = [h for h in hospitals if h.lat != 0 and h.lng != 0]
 
         return hospitals
 

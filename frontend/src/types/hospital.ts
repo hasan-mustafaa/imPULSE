@@ -7,6 +7,7 @@ export interface HospitalWithScore {
   wait_time_label: string;
   travel_time_minutes: number;
   distance_km: number;
+  total_time_minutes: number;
   priority_score: number;
   rank: number;
   ai_reasoning?: string | null;
@@ -22,3 +23,9 @@ export interface RecommendationResponse {
   user_location: UserLocation;
   generated_at: string;
 }
+
+export type SortMode =
+  | "shortest_wait"
+  | "shortest_commute"
+  | "shortest_total"
+  | "custom";

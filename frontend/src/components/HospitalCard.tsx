@@ -8,6 +8,13 @@ interface HospitalCardProps {
   onClick: () => void;
 }
 
+function formatMinutes(min: number): string {
+  if (min < 60) return `${Math.round(min)}min`;
+  const h = Math.floor(min / 60);
+  const m = Math.round(min % 60);
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
 export default function HospitalCard({
   hospital,
   isSelected,
@@ -42,22 +49,22 @@ export default function HospitalCard({
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-white truncate">{hospital.name}</h3>
-          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-300">
+          <div className="mt-1 grid grid-cols-3 gap-1 text-sm text-gray-300">
             <span>Wait: {hospital.wait_time_label}</span>
-            <span>Drive: {hospital.travel_time_minutes}min</span>
-            <span>{hospital.distance_km}km</span>
+            <span>Drive: {formatMinutes(hospital.travel_time_minutes)}</span>
+            <span>Total: {formatMinutes(hospital.total_time_minutes)}</span>
+          </div>
+          <div className="mt-1 text-xs text-gray-500">
+            {hospital.distance_km}km away
           </div>
           {hospital.ai_reasoning && (
-            <p className="mt-2 text-xs text-gray-400 italic">
-              {hospital.ai_reasoning}
-            </p>
+            <div className="mt-2 p-2 rounded bg-purple-500/10 border border-purple-500/30">
+              <p className="text-xs font-medium text-purple-300 mb-0.5">AI Analysis</p>
+              <p className="text-xs text-gray-300 leading-relaxed">
+                {hospital.ai_reasoning}
+              </p>
+            </div>
           )}
-        </div>
-        <div className="flex-shrink-0 text-right">
-          <div className="text-xs text-gray-400">Score</div>
-          <div className="text-lg font-bold text-white">
-            {hospital.priority_score}
-          </div>
         </div>
       </div>
     </button>

@@ -10,3 +10,14 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes marker-ping {
+  75%, 100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.marker-ping {
+  animation: marker-ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}

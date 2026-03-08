@@ -1,6 +1,7 @@
 import json
+import re
 
-import anthropic
+import httpx
 
 from app.config import get_settings
 from app.models import HospitalWithScore
@@ -8,64 +9,91 @@ from app.models import HospitalWithScore
 
 async def get_ai_ranking(
     hospitals: list[HospitalWithScore],
-    severity: str = "medium",
+    sort_by: str = "shortest_total",
 ) -> list[HospitalWithScore]:
-    """Enrich hospital rankings with AI-generated reasoning."""
+    """Re-rank hospitals using Gemini AI with detailed analysis."""
     settings = get_settings()
 
-    if not settings.anthropic_api_key:
+    if not settings.gemini_api_key or not hospitals:
         return hospitals
 
-    summary = "\n".join(
+    hospital_list = "\n".join(
         f"- {h.name}: Wait {h.wait_time_label}, "
-        f"Travel {h.travel_time_minutes}min ({h.distance_km}km), "
-        f"Score {h.priority_score}"
+        f"Drive {h.travel_time_minutes:.0f}min, "
+        f"Total {h.total_time_minutes:.0f}min, "
+        f"Distance {h.distance_km}km"
         for h in hospitals
     )
 
     prompt = (
-        "You are a medical triage assistant helping recommend hospitals.\n\n"
-        f"Patient severity: {severity}\n\n"
-        f"Available hospitals (already scored by wait time + travel time):\n{summary}\n\n"
-        "For each hospital, provide a brief 1-sentence reasoning for its ranking.\n"
-        "Consider: wait times, travel distance, hospital specialization, and severity level.\n\n"
-        'Respond in JSON format:\n'
-        '{\n  "rankings": [\n'
-        '    { "name": "Hospital Name", "reasoning": "Brief explanation" }\n'
-        "  ]\n}"
+        "You are an expert medical advisor helping a patient choose the best emergency department.\n\n"
+        f"The patient's current sort preference is: {sort_by.replace('_', ' ')}.\n\n"
+        f"Here are the nearby hospitals:\n{hospital_list}\n\n"
+        "Your job:\n"
+        "1. RE-RANK these hospitals from best (#1) to worst, using your own judgment. "
+        "Consider wait times, drive times, the overall total, and any knowledge you have about "
+        "these hospitals (capacity, trauma level, specializations, typical crowding patterns).\n"
+        "2. For EACH hospital, write a 2-3 sentence analysis explaining WHY you ranked it there. "
+        "Mention specific numbers. If it's a top pick, say why. If it's ranked low, explain the trade-off.\n\n"
+        "Return ONLY a JSON array sorted by your recommended rank (best first). No markdown fences:\n"
+        '[\n'
+        '  {"name": "Hospital Name", "ai_rank": 1, "reasoning": "2-3 sentence analysis."},\n'
+        '  ...\n'
+        ']'
     )
 
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"gemini-2.0-flash:generateContent?key={settings.gemini_api_key}"
+    )
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0.4, "maxOutputTokens": 2048},
+    }
+
     try:
-        client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
-        message = await client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=1024,
-            messages=[{"role": "user", "content": prompt}],
-        )
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(url, json=payload)
+            data = resp.json()
 
-        text = message.content[0].text if message.content else ""
+        text = data["candidates"][0]["content"]["parts"][0]["text"]
 
-        # Extract JSON from response
-        start = text.find("{")
-        end = text.rfind("}") + 1
-        if start >= 0 and end > start:
-            parsed = json.loads(text[start:end])
-            rankings = parsed.get("rankings", [])
+        # Strip optional markdown code fences
+        text = re.sub(r"```(?:json)?", "", text).strip()
 
-            for h in hospitals:
-                match = next(
-                    (
-                        r
-                        for r in rankings
-                        if r["name"].lower() in h.name.lower()
-                        or h.name.lower() in r["name"].lower()
-                    ),
+        match = re.search(r"\[.*\]", text, re.DOTALL)
+        if not match:
+            print(f"[ai_ranking] Could not find JSON array in: {text[:300]}")
+            return hospitals
+
+        rankings: list[dict] = json.loads(match.group())
+
+        # Build lookup by name (fuzzy match)
+        hospital_map: dict[str, HospitalWithScore] = {}
+        for h in hospitals:
+            hospital_map[h.name.lower()] = h
+
+        for entry in rankings:
+            name = entry.get("name", "")
+            ai_rank = entry.get("ai_rank", 0)
+            reasoning = entry.get("reasoning", "")
+
+            # Fuzzy match hospital name
+            matched = hospital_map.get(name.lower())
+            if not matched:
+                matched = next(
+                    (h for key, h in hospital_map.items()
+                     if key in name.lower() or name.lower() in key),
                     None,
                 )
-                if match:
-                    h.ai_reasoning = match.get("reasoning")
+            if matched:
+                matched.rank = ai_rank
+                matched.ai_reasoning = reasoning
+
+        # Re-sort by AI rank
+        hospitals.sort(key=lambda h: h.rank)
 
     except Exception as e:
-        print(f"AI ranking error: {e}")
+        print(f"[ai_ranking] Gemini API error: {e}")
 
     return hospitals

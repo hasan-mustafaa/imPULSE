@@ -1,12 +1,12 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from enum import Enum
 
 
-class Severity(str, Enum):
-    low = "low"
-    medium = "medium"
-    high = "high"
-    critical = "critical"
+class SortMode(str, Enum):
+    shortest_wait = "shortest_wait"
+    shortest_commute = "shortest_commute"
+    shortest_total = "shortest_total"
+    custom = "custom"
 
 
 class Hospital(BaseModel):
@@ -21,6 +21,7 @@ class Hospital(BaseModel):
 class HospitalWithScore(Hospital):
     travel_time_minutes: float = 0
     distance_km: float = 0
+    total_time_minutes: float = 0
     priority_score: float = 0
     rank: int = 0
     ai_reasoning: str | None = None
@@ -29,7 +30,8 @@ class HospitalWithScore(Hospital):
 class RecommendationRequest(BaseModel):
     lat: float
     lng: float
-    severity: Severity = Severity.medium
+    sort_by: SortMode = SortMode.shortest_total
+    wait_weight: float = Field(default=0.5, ge=0.0, le=1.0)
 
 
 class RecommendationResponse(BaseModel):
