@@ -43,20 +43,20 @@ export default function HospitalCard({
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-white truncate">{hospital.name}</h3>
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-300">
-            <span>Wait: {hospital.waitTimeLabel}</span>
-            <span>Drive: {hospital.travelTimeMinutes}min</span>
-            <span>{hospital.distanceKm}km</span>
+            <span>Wait: {hospital.wait_time_label}</span>
+            <span>Drive: {hospital.travel_time_minutes}min</span>
+            <span>{hospital.distance_km}km</span>
           </div>
-          {hospital.aiReasoning && (
+          {hospital.ai_reasoning && (
             <p className="mt-2 text-xs text-gray-400 italic">
-              {hospital.aiReasoning}
+              {hospital.ai_reasoning}
             </p>
           )}
         </div>
         <div className="flex-shrink-0 text-right">
           <div className="text-xs text-gray-400">Score</div>
           <div className="text-lg font-bold text-white">
-            {hospital.priorityScore}
+            {hospital.priority_score}
           </div>
         </div>
       </div>

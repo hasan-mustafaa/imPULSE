@@ -1,6 +1,6 @@
 # dependencies
-/node_modules
-/.pnp
+node_modules/
+.pnp
 .pnp.*
 .yarn/*
 !.yarn/patches
@@ -8,11 +8,17 @@
 !.yarn/releases
 !.yarn/versions
 
+# python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+
 # testing
 /coverage
 
 # next.js
-/.next/
+.next/
 /out/
 
 # production
@@ -31,21 +37,29 @@ yarn-error.log*
 # env files
 .env
 .env*.local
-!.env.local.example
 .env.local.example
+.env.example
 
 # vercel
 .vercel
 
-# package.json lock files
-package-lock.json
-package.json
-yarn.lock
-pnpm-lock.yaml
-
-postcss.config.js
-tailwind.config.js
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+node_modules/
+.next/
+out/
+build
+.DS_Store
+npm-debug.log*
+
+package-lock.json
+package.json
+postcss.config.js
+
+tsconfig.json
+
+next.config.js
+
+postcss.config.mjs

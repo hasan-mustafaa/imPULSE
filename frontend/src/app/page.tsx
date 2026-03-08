@@ -10,6 +10,8 @@ import type {
   RecommendationResponse,
 } from "@/types/hospital";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 export default function Home() {
   const [hospitals, setHospitals] = useState<HospitalWithScore[]>([]);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
@@ -33,7 +35,6 @@ export default function Home() {
           });
         },
         (err) => {
-          // Fallback to Calgary downtown
           console.warn("Geolocation failed, using Calgary default:", err);
           resolve({ lat: 51.0447, lng: -114.0719 });
         }
@@ -48,7 +49,7 @@ export default function Home() {
       const location = await getUserLocation();
       setUserLocation(location);
 
-      const response = await fetch("/api/recommend", {
+      const response = await fetch(`${API_URL}/api/recommend`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
